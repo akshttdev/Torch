@@ -1,6 +1,5 @@
 from sentence_transformers import SentenceTransformer
 from typing import List
-import torch
 
 # -------- Text Embeddings (Docs + Issues) --------
 _text_model = None
@@ -11,17 +10,16 @@ def _load_text_model():
         _text_model = SentenceTransformer("BAAI/bge-base-en-v1.5")
     return _text_model
 
-def embed(texts: List[str]) -> List[list]:
+def embed_text(texts: List[str]) -> List[list]:
     model = _load_text_model()
-    embeddings = model.encode(
+    return model.encode(
         texts,
         normalize_embeddings=True,
         show_progress_bar=False,
-    )
-    return embeddings.tolist()
+    ).tolist()
 
 
-# -------- Code Embeddings (Source Code) --------
+# -------- Code Embeddings --------
 _code_model = None
 
 def _load_code_model():
@@ -32,9 +30,8 @@ def _load_code_model():
 
 def embed_code(texts: List[str]) -> List[list]:
     model = _load_code_model()
-    embeddings = model.encode(
+    return model.encode(
         texts,
         normalize_embeddings=True,
         show_progress_bar=False,
-    )
-    return embeddings.tolist()
+    ).tolist()

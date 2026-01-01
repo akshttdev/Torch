@@ -1,25 +1,26 @@
-import hashlib
 import time
+import uuid
 from tqdm import tqdm
 from dotenv import load_dotenv
-import uuid
 
 load_dotenv()
 
-from app.db.qdrant import get_qdrant, init_docs_collection, COLLECTION_NAME
-from app.embeddings.encoder import embed
-from app.ingestion.chunker import chunk_docs
-from app.ingestion.docs_crawler import get_doc_links, extract_page
+from app.db.qdrant import get_qdrant, init_docs_collection, DOCS_COLLECTION_NAME
+from app.embeddings.encoder import embed_text
+from app.ingestion.docs.chunker import chunk_docs
+from app.ingestion.docs.crawler import get_doc_links, extract_page
 
 BATCH_SIZE = 16
 
 
 def run():
+    print("🚀 Phase 1.1 — Docs ingestion started")
+
     init_docs_collection()
     client = get_qdrant()
 
     links = get_doc_links()
-    print("DOC LINKS FOUND:", len(links))
+    print("📄 DOC LINKS FOUND:", len(links))
 
     points = []
 
@@ -29,14 +30,16 @@ def run():
             continue
 
         chunks = chunk_docs(page["text"])
-        vectors = embed(chunks)
+        vectors = embed_text(chunks)  # ✅ 768-dim
 
         for chunk, vector in zip(chunks, vectors):
-            content_key = page["url"] + chunk
-            content_id = uuid.uuid5(uuid.NAMESPACE_URL, content_key)
+            pid = uuid.uuid5(
+                uuid.NAMESPACE_URL,
+                page["url"] + chunk
+            )
 
             points.append({
-                "id": str(content_id),
+                "id": str(pid),
                 "vector": vector,
                 "payload": {
                     "source": "documentation",
@@ -46,18 +49,17 @@ def run():
                 },
             })
 
-    print("TOTAL DOC CHUNKS:", len(points))
+    print("📦 TOTAL DOC CHUNKS:", len(points))
 
     for i in range(0, len(points), BATCH_SIZE):
-        batch = points[i : i + BATCH_SIZE]
         client.upsert(
-            collection_name=COLLECTION_NAME,
-            points=batch,
+            collection_name=DOCS_COLLECTION_NAME,  # ✅ FIXED
+            points=points[i:i + BATCH_SIZE],
         )
-        print(f"Upserted {i + len(batch)} / {len(points)}")
+        print(f"Upserted {min(i + BATCH_SIZE, len(points))}/{len(points)}")
         time.sleep(0.3)
 
-    print("Phase 1.1 (Docs) completed successfully")
+    print("✅ Phase 1.1 (Docs) completed successfully")
 
 
 if __name__ == "__main__":
