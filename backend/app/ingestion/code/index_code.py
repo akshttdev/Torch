@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from app.ingestion.code.utils import build_code_content
 from app.db.qdrant import get_qdrant, init_code_collection, CODE_COLLECTION_NAME
 from app.embeddings.encoder import embed_code
 from app.ingestion.code.code_parser import parse_python_file
@@ -79,10 +80,8 @@ def run():
                     "source": "code",
                     "symbol": chunk["symbol"],
                     "type": chunk["type"],
-                    "docstring": chunk["docstring"],
                     "file_path": chunk["file_path"],
-                    "start_line": chunk["start_line"],
-                    "end_line": chunk["end_line"],
+                    "content": build_code_content(chunk),
                 },
             })
 
