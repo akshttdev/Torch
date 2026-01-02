@@ -16,3 +16,4 @@ env/
 
 # Data artifacts (optional, keep if large)
 backend/data/
+backend/tests/

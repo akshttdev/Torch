@@ -4,6 +4,15 @@ from app.rag.fusion import weighted_merge
 from app.rag.reranker import rerank
 from app.rag.cache import get_cached, set_cached
 
+from app.rag.prompt import build_prompt
+from app.rag.llm import generate_answer
+from app.rag.guards import is_definitive, answer_from_context
+from app.rag.rate_limit import llm_allowed, record_llm_call
+
+
+def answer_query(query: str, context: list) -> str:
+    prompt = build_prompt(query, context)
+    return generate_answer(prompt)
 
 def retrieve(query: str, top_k: int = 10):
     # 1️⃣ Cache check
