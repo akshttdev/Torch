@@ -1,25 +1,22 @@
-from typing import List, Dict
+# backend/app/rag/guards.py
 
-
-def is_definitive(context: List[Dict]) -> bool:
+def is_definitive(context: str) -> bool:
     """
-    Returns True if the answer is directly present in context.
+    Returns True if the answer is directly present in the assembled context string.
     """
     if not context:
         return False
 
-    for c in context:
-        text = c.get("content", "").lower()
-        if "keeps the computation graph alive" in text:
-            return True
-        if "freed after backward" in text:
-            return True
+    text = context.lower()
 
-    return False
+    return (
+        "keeps the computation graph alive" in text
+        or "freed after backward" in text
+    )
 
 
-def answer_from_context(context: List[Dict]) -> str:
+def answer_from_context(context: str) -> str:
     """
-    Deterministic answer builder from context.
+    Deterministic answer when context already contains the answer.
     """
-    return " ".join(c["content"] for c in context)
+    return context

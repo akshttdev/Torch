@@ -20,7 +20,7 @@ from app.rag.fusion import (
 
 
 COLLECTION_MAP = {
-    "docs": DOCS_COLLECTION_NAME,
+    "documentation": DOCS_COLLECTION_NAME,
     "code": CODE_COLLECTION_NAME,
     "issues": ISSUES_COLLECTION_NAME,
 }
@@ -56,51 +56,34 @@ def _search_collection(
 
     return results
 
-
-def multi_collection_search(
-    query: str,
-    routing: Dict,
-) -> List[Dict]:
-    """
-    Phase 2.3:
-    - retrieve per collection
-    - normalize scores
-    - apply routing weights
-    - fuse + rank
-    """
+def multi_collection_search(query: str, routing: Dict) -> List[Dict]:
     client = get_qdrant()
 
     all_results = {
-        "docs": [],
+        "documentation": [],
         "code": [],
         "issues": [],
     }
 
-    # ---------- Retrieve ----------
     for collection in routing["collections"]:
         all_results[collection] = _search_collection(
-            client=client,
-            collection=collection,
-            query=query,
-            top_k=routing["top_k"][collection],
+            client,
+            collection,
+            query,
+            routing["top_k"][collection],
         )
 
-    # ---------- Normalize ----------
     for k in all_results:
         all_results[k] = normalize_scores(all_results[k])
 
-    # ---------- Apply Weights ----------
     for k in all_results:
         all_results[k] = apply_weight(
             all_results[k],
             routing["weights"][k],
         )
 
-    # ---------- Fuse ----------
-    fused = fuse_results(
-        all_results["docs"],
+    return fuse_results(
+        all_results["documentation"],
         all_results["code"],
         all_results["issues"],
     )
-
-    return fused

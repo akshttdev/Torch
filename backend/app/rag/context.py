@@ -1,3 +1,5 @@
+# backend/app/rag/context.py
+
 from typing import List, Dict
 from collections import defaultdict
 
@@ -9,9 +11,8 @@ MAX_PER_SOURCE = {
 
 def assemble_context(results: List[Dict]) -> str:
     """
-    Convert reranked retrieval results into a grounded LLM context.
+    Convert retrieval results into a single grounded context string.
     """
-
     buckets = defaultdict(list)
 
     for r in results:
@@ -21,7 +22,6 @@ def assemble_context(results: List[Dict]) -> str:
 
     sections = []
 
-    # ---- CODE ----
     for r in buckets.get("code", []):
         p = r["payload"]
         sections.append(
@@ -33,7 +33,6 @@ Symbol: {p.get("symbol")}
 """
         )
 
-    # ---- DOCUMENTATION ----
     for r in buckets.get("documentation", []):
         p = r["payload"]
         sections.append(
@@ -45,7 +44,6 @@ URL: {p.get("url")}
 """
         )
 
-    # ---- ISSUES ----
     for r in buckets.get("issues", []):
         p = r["payload"]
         sections.append(

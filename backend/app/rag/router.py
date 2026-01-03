@@ -12,7 +12,8 @@ ISSUE_KEYWORDS = [
 ]
 
 DOC_KEYWORDS = [
-    "what is", "how does", "explain", "documentation"
+    "what is", "what does", "why", "how does",
+    "explain", "documentation"
 ]
 
 
@@ -20,12 +21,11 @@ def route_query(query: str) -> Dict:
     q = query.lower()
 
     score = {
-        "docs": 0,
+        "documentation": 0,
         "code": 0,
         "issues": 0,
     }
 
-    # --- keyword scoring ---
     for kw in CODE_KEYWORDS:
         if kw in q:
             score["code"] += 2
@@ -36,23 +36,28 @@ def route_query(query: str) -> Dict:
 
     for kw in DOC_KEYWORDS:
         if kw in q:
-            score["docs"] += 1
+            score["documentation"] += 1
 
-    # --- fallback bias ---
-    score["docs"] += 1  # docs always useful
+    # docs always useful
+    score["documentation"] += 1
 
-    # --- normalize ---
+    # strong bias for explanatory queries
+    if any(x in q for x in ["why", "what is", "what does", "how does", "explain"]):
+        score["documentation"] += 3
+
     total = sum(score.values())
     weights = {k: v / total for k, v in score.items()}
 
-    # --- decide top_k per collection ---
     top_k = {
-        "docs": 4 if weights["docs"] > 0.2 else 2,
-        "code": 6 if weights["code"] > 0.3 else 3,
+        "documentation": 4 if weights["documentation"] > 0.25 else 3,
+        "code": 6 if weights["code"] > 0.3 else 4,
         "issues": 4 if weights["issues"] > 0.25 else 2,
     }
 
-    collections = [k for k, v in weights.items() if v > 0.15]
+    collections = [
+        k for k, v in weights.items()
+        if v > 0.15 or k == "documentation"
+    ]
 
     return {
         "collections": collections,

@@ -1,28 +1,11 @@
-from typing import List, Union, Dict
+# backend/app/rag/prompt.py
 
+def build_prompt(query: str, context: str) -> str:
+    """
+    Build a grounded LLM prompt from a single assembled context string.
+    """
 
-def build_prompt(query: str, context: Union[str, List[Dict]]) -> str:
-    # Case 1: context already assembled (string)
-    if isinstance(context, str):
-        formatted_context = context
-
-    # Case 2: structured context (list of dicts)
-    else:
-        blocks = []
-        for i, chunk in enumerate(context, start=1):
-            source = chunk.get("source", "unknown").upper()
-            content = chunk.get("content", "").strip()
-
-            blocks.append(
-                f"[CONTEXT {i}]\n"
-                f"SOURCE: {source}\n"
-                f"{content}"
-            )
-
-        formatted_context = "\n\n".join(blocks)
-
-    return f"""
-You are an expert PyTorch engineer and technical assistant.
+    system_rules = """You are an expert PyTorch engineer and technical assistant.
 
 RULES:
 1. Answer ONLY using the provided context.
@@ -32,11 +15,14 @@ RULES:
 4. Use code snippets ONLY if they appear in the context.
 5. Do NOT invent APIs, functions, or explanations.
 6. Be concise but technically precise.
+"""
+
+    prompt = f"""{system_rules}
 
 =====================
 CONTEXT
 =====================
-{formatted_context}
+{context}
 
 =====================
 USER QUESTION
@@ -46,4 +32,6 @@ USER QUESTION
 =====================
 ANSWER
 =====================
-""".strip()
+"""
+
+    return prompt

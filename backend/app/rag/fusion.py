@@ -35,26 +35,3 @@ def fuse_results(
     return sorted(merged, key=lambda r: r["final_score"], reverse=True)
 
 
-def weighted_merge(
-    results: List[Dict],
-    routing: Dict,
-) -> List[Dict]:
-    """
-    Phase 2.3 – weighted fusion
-    """
-
-    grouped = defaultdict(list)
-
-    # group by collection
-    for r in results:
-        grouped[r["collection"]].append(r)
-
-    docs = normalize_scores(grouped.get("docs", []))
-    code = normalize_scores(grouped.get("code", []))
-    issues = normalize_scores(grouped.get("issues", []))
-
-    docs = apply_weight(docs, routing["weights"].get("docs", 0.0))
-    code = apply_weight(code, routing["weights"].get("code", 0.0))
-    issues = apply_weight(issues, routing["weights"].get("issues", 0.0))
-
-    return fuse_results(docs, code, issues)
