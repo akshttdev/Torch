@@ -74,9 +74,6 @@ export default function Landing() {
           }}
         />
 
-        {/* film-grain noise overlay across the whole hero */}
-        <div aria-hidden className="noise-overlay" />
-
         {/* nav — over solid black top → light text */}
         <Nav />
 
@@ -421,13 +418,13 @@ export default function Landing() {
 
       {/* ===================================================== CTA — sized so CTA + footer fit in one viewport */}
       <section className="canvas-dark relative isolate w-full overflow-hidden">
-        <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-col items-center px-6 py-16 text-center md:px-12 md:py-20">
+        <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-col items-center justify-center px-6 py-44 text-center md:px-12 md:min-h-[640px] md:py-56">
           <div className="mono mb-5 flex items-center gap-2 text-[10.5px] uppercase tracking-[0.22em] text-zinc-500">
             <span className="text-zinc-500 tabular">06</span>
             <span className="text-zinc-700">·</span>
             <span>Ready when you are</span>
           </div>
-          <h2 className="font-serif text-[clamp(5.4rem,13.2vw,11.4rem)] leading-[0.94] tracking-[-0.025em] text-white">
+          <h2 className="font-serif text-[clamp(2rem,4.4vw,3.6rem)] leading-[1.04] tracking-[-0.015em] text-white">
             Ask your next PyTorch
             <br />
             question on Torch.

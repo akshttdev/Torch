@@ -3,13 +3,13 @@
 
 export function HeroChat() {
   return (
-    <div className="relative w-full max-w-[280px] rounded-md border border-white/20 bg-white/[0.08] p-2 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl backdrop-saturate-150">
+    <div className="relative w-full max-w-[310px] rounded-md border border-white/20 bg-white/[0.08] p-2.5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl backdrop-saturate-150">
       {/* top icon row */}
-      <div className="mb-2 flex items-center justify-end gap-2 text-zinc-400">
+      <div className="mb-2 flex items-center justify-end gap-2 text-white">
         <button
           type="button"
           aria-label="Attach"
-          className="rounded-md p-1.5 hover:bg-white/[0.06] hover:text-zinc-200"
+          className="rounded-md p-1.5 hover:bg-white/[0.1]"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path
@@ -23,7 +23,7 @@ export function HeroChat() {
         <button
           type="button"
           aria-label="Link"
-          className="rounded-md p-1.5 hover:bg-white/[0.06] hover:text-zinc-200"
+          className="rounded-md p-1.5 hover:bg-white/[0.1]"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path
@@ -37,7 +37,7 @@ export function HeroChat() {
         <button
           type="button"
           aria-label="More"
-          className="rounded-md p-1.5 hover:bg-white/[0.06] hover:text-zinc-200"
+          className="rounded-md p-1.5 hover:bg-white/[0.1]"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="8" cy="3.5" r="1" />

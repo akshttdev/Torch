@@ -50,8 +50,8 @@ See [`TORCH_PLAN.md`](./TORCH_PLAN.md) for the full audit, PRD, task backlog, an
 ```mermaid
 graph LR
   Q([query]) --> R[router]
-  R --> D[dense · BGE-base]
-  R --> C[dense · jina-code-v2]
+  R --> D[dense BGE-base]
+  R --> C[dense jina-code-v2]
   R --> B[BM25 sparse]
   D --> F{RRF k=60}
   C --> F
@@ -59,8 +59,8 @@ graph LR
   F --> X[bge-reranker]
   X --> P[grounded prompt]
   P --> L[Claude Sonnet 4.6]
-  L -->|SSE token+citation| UI[/Next.js /q/[id]/]
-  D -.-> QD[(Qdrant<br/>docs · code · issues)]
+  L -->|SSE token + citation| UI[Next.js dashboard]
+  D -.-> QD[(Qdrant)]
   C -.-> QD
   B -.-> QD
 ```
