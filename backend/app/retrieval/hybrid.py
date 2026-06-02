@@ -41,17 +41,16 @@ def _dense_search(
     vector = (embed_code([query]) if is_code else embed_text([query]))[0]
 
     client = get_qdrant()
-    points = client.search(
+    res = client.query_points(
         collection_name=qcoll,
-        query_vector=vector,
+        query=vector,
         limit=top_k,
         with_payload=True,
     )
     out: List[Hit] = []
-    for p in points:
+    for p in res.points:
         payload = p.payload or {}
         cid = payload.get("id") or str(p.id)
-        # carry the qdrant numeric score on the payload for transparency
         payload = {**payload, "_dense_score": float(p.score)}
         out.append((str(cid), float(p.score), payload))
     return out
