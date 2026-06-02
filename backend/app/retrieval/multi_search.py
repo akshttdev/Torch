@@ -40,14 +40,14 @@ def _search_collection(
     else:
         vector = embed_text([query])[0]
 
-    hits = client.search(
+    res = client.query_points(
         collection_name=COLLECTION_MAP[collection],
-        query_vector=vector,
+        query=vector,
         limit=top_k,
     )
 
     results = []
-    for h in hits:
+    for h in res.points:
         results.append({
             "collection": collection,
             "score": h.score,

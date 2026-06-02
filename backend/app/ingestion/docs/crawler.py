@@ -11,24 +11,52 @@ MAX_RETRIES = 3
 RETRY_SLEEP = 2
 
 
-def get_doc_links():
+def _resolve_stable_root() -> str:
+    """`/docs/stable/` is a thin redirect stub; follow it to the real
+    versioned docs root, e.g. `https://pytorch.org/docs/2.12/`."""
     html = requests.get(BASE_URL, headers=HEADERS, timeout=20).text
     soup = BeautifulSoup(html, "html.parser")
-
-    links = set()
-
     for a in soup.select("a[href]"):
-        href = a["href"]
-        full = urljoin(BASE_URL, href)
+        full = urljoin(BASE_URL, a["href"])
         parsed = urlparse(full)
-
         if (
             parsed.netloc == "pytorch.org"
-            and parsed.path.startswith("/docs/stable/")
+            and parsed.path.startswith("/docs/")
+            and parsed.path.endswith("/index.html")
+            and "/stable/" not in parsed.path
+        ):
+            return full.rsplit("/", 1)[0] + "/"
+    return BASE_URL
+
+
+def _collect_links(page_url: str, base_path: str) -> set[str]:
+    try:
+        html = requests.get(page_url, headers=HEADERS, timeout=20).text
+    except (RequestException, Timeout):
+        return set()
+    soup = BeautifulSoup(html, "html.parser")
+    out: set[str] = set()
+    for a in soup.select("a[href]"):
+        full = urljoin(page_url, a["href"]).split("#")[0]
+        parsed = urlparse(full)
+        if (
+            parsed.netloc == "pytorch.org"
+            and parsed.path.startswith(base_path)
             and parsed.path.endswith(".html")
         ):
-            links.add(full.split("#")[0])
+            out.add(full)
+    return out
 
+
+def get_doc_links() -> list[str]:
+    """Return every doc URL we can reach from the stable docs root.
+    Uses genindex (flat A–Z API list) + main index toctree as seed pages —
+    together they cover ~all public pages without recursive crawling."""
+    root = _resolve_stable_root()
+    base_path = urlparse(root).path  # e.g. "/docs/2.12/"
+    links: set[str] = set()
+    for seed in ("genindex.html", "index.html", "py-modindex.html"):
+        links |= _collect_links(root + seed, base_path)
     return sorted(links)
 
 
