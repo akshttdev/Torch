@@ -1,5 +1,7 @@
-import { sources, corpus } from "@/lib/mock";
+import { SourcesTable } from "@/components/SourcesTable";
+import { sources as mockSources, corpus } from "@/lib/mock";
 import { fmtInt, fmtBytes, relTime } from "@/lib/utils";
+import { getSources, type SourceRow } from "@/lib/api";
 
 export const metadata = {
   title: "Torch",
@@ -13,19 +15,56 @@ const toneBg = {
   purple: "bg-pastel-purple",
 } as const;
 
-export default function SourcesPage() {
+// fetch on the server side at request time
+export const revalidate = 30;
+
+type LiveStatus = { live: boolean; rows: SourceRow[] | null; error?: string };
+
+async function loadLive(): Promise<LiveStatus> {
+  try {
+    const res = await getSources();
+    return { live: true, rows: res.sources };
+  } catch (e) {
+    return { live: false, rows: null, error: (e as Error).message };
+  }
+}
+
+export default async function SourcesPage() {
+  const live = await loadLive();
+
+  // Merge live data with mock metadata (chunker config, sample chunks).
+  // The backend tells us count/freshness/status; the mock fills in the
+  // descriptive metadata we haven't surfaced through `/sources` yet.
+  const sources = live.rows
+    ? mockSources.map((m) => {
+        const hit = live.rows!.find((r) => r.kind === m.kind);
+        if (!hit) return m;
+        return {
+          ...m,
+          count: hit.count,
+          last_synced_at: hit.last_synced_at ?? m.last_synced_at,
+          status: hit.status === "empty" ? "stale" : hit.status,
+        };
+      })
+    : mockSources;
+
+  const totalChunks = sources.reduce((a, s) => a + s.count, 0);
+  const totalBytes = corpus.totalBytes; // not yet surfaced from backend
+  const freshest = sources.filter((s) => s.count > 0).sort((a, b) => b.last_synced_at - a.last_synced_at)[0];
+  const oldest = sources.filter((s) => s.count > 0).sort((a, b) => a.last_synced_at - b.last_synced_at)[0];
+
   const cards = [
-    { k: "Total chunks", v: fmtInt(corpus.totalChunks), sub: "across all corpora" },
-    { k: "Total bytes", v: fmtBytes(corpus.totalBytes), sub: "raw stored payload" },
+    { k: "Total chunks", v: fmtInt(totalChunks), sub: "across all corpora" },
+    { k: "Total bytes", v: fmtBytes(totalBytes), sub: "raw stored payload" },
     {
       k: "Freshest",
-      v: corpus.fresh ? relTime(corpus.fresh.last_synced_at) : "—",
-      sub: corpus.fresh?.name ?? "",
+      v: freshest ? relTime(freshest.last_synced_at) : "—",
+      sub: freshest?.name ?? "",
     },
     {
       k: "Oldest",
-      v: corpus.oldest ? relTime(corpus.oldest.last_synced_at) : "—",
-      sub: corpus.oldest?.name ?? "",
+      v: oldest ? relTime(oldest.last_synced_at) : "—",
+      sub: oldest?.name ?? "",
     },
   ];
 
@@ -34,8 +73,8 @@ export default function SourcesPage() {
       <div className="mb-10 flex flex-wrap items-end justify-between gap-6 border-b border-zinc-200/70 pb-6">
         <div>
           <div className="mono mb-3 flex items-center gap-3 text-[10.5px] uppercase tracking-[0.22em] text-zinc-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-torch-500" />
-            <span>Corpus</span>
+            <span className={`h-1.5 w-1.5 rounded-full ${live.live ? "bg-emerald-500" : "bg-amber-500"}`} />
+            <span>{live.live ? "Corpus · live" : "Corpus · mock data (backend offline)"}</span>
             <span className="text-zinc-300">|</span>
             <span>4 sources · 768-d cosine · Qdrant Cloud</span>
           </div>
@@ -47,6 +86,11 @@ export default function SourcesPage() {
           <p className="mono mt-4 max-w-md text-[12.5px] leading-relaxed tracking-[0.04em] text-zinc-500">
             Each source is indexed independently with its own chunker and
             embedder. The pipeline routes per query and fuses with RRF.
+            {!live.live && live.error && (
+              <span className="mt-2 block text-rose-600">
+                Backend error: {live.error.slice(0, 120)}
+              </span>
+            )}
           </p>
         </div>
         <button
@@ -83,65 +127,7 @@ export default function SourcesPage() {
         })}
       </div>
 
-      {/* sources table — light */}
-      <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white">
-        <div className="mono grid grid-cols-[1.4fr_0.7fr_0.6fr_0.6fr] items-center gap-4 border-b border-zinc-200/70 bg-cream-50 px-5 py-3 text-[10.5px] uppercase tracking-[0.22em] text-zinc-500">
-          <span>Source</span>
-          <span className="text-right">Chunks</span>
-          <span>Synced</span>
-          <span>Status</span>
-        </div>
-        <ul>
-          {sources.map((s, i) => (
-            <li
-              key={s.kind}
-              className="grid grid-cols-[1.4fr_0.7fr_0.6fr_0.6fr] items-center gap-4 border-b border-zinc-100 px-5 py-4 last:border-b-0 transition-colors hover:bg-cream-50"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-md ${toneBg[toneCycle[i % toneCycle.length]]}`}>
-                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-900" />
-                </span>
-                <div className="min-w-0">
-                  <div className="truncate text-[14px] text-zinc-900">
-                    {s.name}
-                  </div>
-                  <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-                    {s.kind} · {s.embedder.split("/").pop()}
-                  </div>
-                </div>
-              </div>
-              <div className="mono text-right text-[13.5px] tabular text-zinc-900">
-                {s.count > 0 ? fmtInt(s.count) : <span className="text-zinc-400">—</span>}
-              </div>
-              <div className="mono text-[11.5px] tracking-[0.04em] text-zinc-600">
-                {relTime(s.last_synced_at)}
-              </div>
-              <div>
-                <span
-                  className={`mono inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] ${
-                    s.status === "healthy"
-                      ? "bg-pastel-green text-zinc-900"
-                      : s.status === "stale"
-                      ? "bg-pastel-purple text-zinc-900"
-                      : "bg-pastel-pink text-zinc-900"
-                  }`}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      s.status === "healthy"
-                        ? "bg-emerald-600"
-                        : s.status === "stale"
-                        ? "bg-amber-600"
-                        : "bg-rose-600"
-                    }`}
-                  />
-                  {s.status}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <SourcesTable sources={sources} />
 
       {/* payload schema card */}
       <div className="mt-10 mb-12 grid grid-cols-12 gap-4">
@@ -166,19 +152,21 @@ export default function SourcesPage() {
               <span className="text-instrument-500">payload</span>
               {" = {"}
               {"\n  "}
-              <span className="text-torch-600">&quot;kind&quot;</span>: docs | code | issues | forum,
-              {"\n  "}
+              <span className="text-torch-600">&quot;kind&quot;</span>: docs |
+              code | issues | forum,{"\n  "}
               <span className="text-torch-600">&quot;source_url&quot;</span>: str,
               {"\n  "}
               <span className="text-torch-600">&quot;title&quot;</span>: str,
               {"\n  "}
               <span className="text-torch-600">&quot;content&quot;</span>: str,
               {"\n  "}
-              <span className="text-torch-600">&quot;anchor&quot;</span>: str | None,
+              <span className="text-torch-600">&quot;anchor&quot;</span>: str |
+              None,
               {"\n  "}
               <span className="text-torch-600">&quot;last_synced_at&quot;</span>: int,
               {"\n  "}
-              <span className="text-torch-600">&quot;sha&quot;</span>: str | None,
+              <span className="text-torch-600">&quot;sha&quot;</span>: str |
+              None,
               {"\n"}
               {"}"}
             </code>
